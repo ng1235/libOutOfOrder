@@ -1,0 +1,123 @@
+
+<script src="tinytest.js"></script>
+
+<script>
+
+// Function Signature
+  // Two modes:
+    // Store - librarySystem(libraryName, dependencies, callback)
+    // Load - librarySystem(libraryName)
+
+    // Callback parameters
+      // An array of dependencies
+
+  // Return value
+    // The library, loaded with required dependencies.
+    // Only returns in load mode
+
+  (function() {
+    var libraryStorage = {};
+    
+    function librarySystem(libraryName, dependencies, callback) {
+      // Store library as object
+      if (arguments.length === 3) {
+        libraryStorage[libraryName] = {
+          dependencies: dependencies,
+          callback: callback,
+          cachedResult: null
+        }
+
+        // Load library
+        } else if (arguments.length === 1) {
+          return loadLibrary(libraryName);
+        
+        // Throw error for invalid usage
+        } else {
+          throw new TypeError('Load usage: librarySystem(libraryName) | Store usage: librarySystem(libraryName, dependencies, callback)')
+        }
+      }
+
+      // Loads library with all dependencies for a given libraryName
+      function loadLibrary(libraryName) {
+        var library = libraryStorage[libraryName];
+        var dependencies = library.dependencies;
+        var callback = library.callback
+        var dependenciesRequired;
+
+        if (!library.cachedResult) {
+          if (dependencies.length > 0) {
+            dependenciesRequired = dependencies.map(function(dependency) {
+              return librarySystem(dependency);
+            });
+          }
+          library.cachedResult = callback.apply(null, dependenciesRequired);
+        }
+        return library.cachedResult;
+      }
+    window.librarySystem = librarySystem;
+  })();
+
+
+  tests ({
+    'It should load a library with zero dependencies.': function() {
+      // debugger;
+      librarySystem('name', [], function() {
+        return 'Gordon';
+      });
+      var test = librarySystem('name');
+      eq(test, 'Gordon');
+    },
+
+    'It should store multiple libraries.': function() {
+      librarySystem('company', [], function() {
+        return 'Watch and Code';
+      });
+      var test = librarySystem('company');
+      eq(test, 'Watch and Code');
+    },
+
+    'It should load libraries with multiple dependencies.': function() {
+      // debugger;
+      librarySystem('outOfOrder', ['secondName', 'secondCompany'], function(secondName, secondCompany) {
+        return secondName + ' works at ' + secondCompany;
+      });
+
+      librarySystem('secondName', [], function() {
+        return 'Matthew'
+      });
+
+      librarySystem('secondCompany', [], function() {
+        return 'Woodside'
+      });
+
+      var test = librarySystem('outOfOrder');
+      eq(test, 'Matthew works at Woodside');
+    },
+
+    'It should throw type error if the number of arguments is !== 1 or 3.': function() {
+      // debugger;
+      try {
+        let isTypeError = false;
+        librarySystem('typeError', function() {});
+      } catch(e) {
+        isTypeError = (e instanceof TypeError);
+      }
+      eq(isTypeError, true);
+    },
+
+    'It should run callback once only, even if a library is called multiple times.': function() {
+      // debugger;
+      var numberOfTimesCallbackHasRun = 0;
+      librarySystem('thirdLibrary', [], function() {
+        numberOfTimesCallbackHasRun++;
+        return 'libraryLoaded';
+      });
+      librarySystem('thirdLibrary');
+      librarySystem('thirdLibrary');
+      librarySystem('thirdLibrary');
+      eq(numberOfTimesCallbackHasRun, 1);
+    }
+  })
+</script>
+
+
